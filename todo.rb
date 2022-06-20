@@ -21,11 +21,11 @@ when 'help'
     puts "Choose Option\nadd or show or remove" #Prompts user to choose option between the 3 options
 when 'add'
 
-count = client[:configs].find({key:"last_id"}).first["value"]
-count= count + 1
-client[:tasks].insert_one({ name: ARGV[1], task_id: count}) #add fx
+count = client[:configs].find({key:"last_id"}).first["value"] #setted count integer variable to the value of its last id in the configs collection
+count= count + 1  #Incremented the count value by one since we are about to add a new task to the list in tasks collection
+client[:tasks].insert_one({ name: ARGV[1], task_id: count}) #added a new task and set its id to the newly created count (previous line)
 
-client[:configs].update_one({key: "last_id"},{'$set':{value:count}})
+client[:configs].update_one({key: "last_id"},{'$set':{value:count}}) #update the value of the new task to the new count#
 
 when 'show'
     found= client[:tasks].find()
@@ -34,18 +34,13 @@ when 'show'
 when 'remove'
     client[:tasks].delete_one({ task_id: ARGV[1].to_i}) #remove One
 
-# when 'removeAll'
-#     client[:tasks].delete_many({ name: ARGV[1]}) #remove All
+ when 'removeMany'
+     client[:tasks].delete_many({ task_id: {"$in":[ARGV[1].to_i, ARGV[2].to_i]}}) #remove All
 
 else
     puts "You can only choose 'help', 'add', 'show' or 'remove'"
 end
 
-
 ##largest_id = collection.find().sort({task_id:-1}).limit(1) || 0
 
-## New config collection
-
-
 # client[:tasks].insert_one({ name: ARGV[1]}
-# puts count
