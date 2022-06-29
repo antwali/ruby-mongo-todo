@@ -11,35 +11,67 @@ MongoDB object ids are not very user-friendly, so it may be a good idea to numbe
 =end
 
 require "mongo"
+class MongoDbConnection
+    class << self
+        def tasks_collection
+            client[:tasks]
+        end
+        
+        def configs_collection
+            client[:configs]
+        end
 
-#Connects to the database
-client = Mongo::Client.new([ '127.0.0.1:27017' ], database: 'todo')
+        def client
+            return @client if defined? (@client)
+
+            @client = Mongo::Client.new([ '127.0.0.1:27017' ], database: 'todo') #Connects to the database connection
+        end
+
+        def help()
+            puts "Choose Option\nadd or show or remove" #Prompts user to choose option between the 3 options
+        end
+
+        def add (task_name)
+            count= configs_collection.find({key:"last_id"}).first["value"]
+            count = count + 1
+            tasks_collection.insert_one({ name: task_name, task_id: count})
+            configs_collection.update_one({key: "last_id"},{'$set':{value:count}})
+        end
+        
+        def show()
+            found= tasks_collection.find()
+            found.each {|x| puts "#{x["name"]} (#{x["task_id"]})" }
+        end
+
+        def remove(task_name)
+            tasks_collection.delete_one({ task_id: task_name.to_i})
+        end
+        
+        def removeMany(first, second)
+            tasks_collection.delete_many({ task_id: {"$in":[first.to_i, second.to_i]}})
+        end
+
+    end 
+end
+
+
 
 choice = ARGV[0]
 case choice
 when 'help'
-    puts "Choose Option\nadd or show or remove" #Prompts user to choose option between the 3 options
+    help()
 when 'add'
-
-count = client[:configs].find({key:"last_id"}).first["value"] #setted count integer variable to the value of its last id in the configs collection
-count= count + 1  #Incremented the count value by one since we are about to add a new task to the list in tasks collection
-client[:tasks].insert_one({ name: ARGV[1], task_id: count}) #added a new task and set its id to the newly created count (previous line)
-
-client[:configs].update_one({key: "last_id"},{'$set':{value:count}}) #update the value of the new task to the new count#
-
+    MongoDbConnection.add(ARGV[1])
 when 'show'
-    found= client[:tasks].find()
-    found.each {|x| puts "#{x["name"]} (#{x["task_id"]})" }#shows all documemnts in the collection
-
+    MongoDbConnection.show()
 when 'remove'
-    client[:tasks].delete_one({ task_id: ARGV[1].to_i}) #remove One
-
- when 'removeMany'
-     client[:tasks].delete_many({ task_id: {"$in":[ARGV[1].to_i, ARGV[2].to_i]}}) #remove All
-
+    MongoDbConnection.remove(ARGV[1])
+when 'removeMany'
+     MongoDbConnection.removeMany(ARGV[1], ARGV[2])
 else
     puts "You can only choose 'help', 'add', 'show' or 'remove'"
 end
+
 
 ##largest_id = collection.find().sort({task_id:-1}).limit(1) || 0
 
